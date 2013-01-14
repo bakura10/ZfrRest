@@ -42,6 +42,11 @@ class SelectModelListener implements ListenerAggregateInterface
     protected $listeners = array();
 
     /**
+     * @var string
+     */
+    protected $fallbackModel = '';
+
+    /**
      * Map a type to a specific instance of ModelInterface
      *
      * @var array
@@ -51,6 +56,7 @@ class SelectModelListener implements ListenerAggregateInterface
         'application/xhtml+xml'  => 'Zend\View\Model\ViewModel',
         'application/javascript' => 'Zend\View\Model\JsonModel',
         'application/json'       => 'Zend\View\Model\JsonModel',
+        'application/x-json'     => 'Zend\View\Model\JsonModel'
     );
 
 
@@ -75,6 +81,66 @@ class SelectModelListener implements ListenerAggregateInterface
                 unset($this->listeners[$index]);
             }
         }
+    }
+
+    /**
+     * Set the model FQCN that is used if no Model is matched according to the Accept header
+     *
+     * @param  string $fallbackModel
+     * @return SelectModelListener
+     */
+    public function setFallbackModel($fallbackModel)
+    {
+        if (!is_subclass_of($fallbackModel, 'Zend\View\Model\ModelInterface')) {
+            throw new Exception\DomainException(sprintf(
+                '%s expects a valid implementation of Zend\View\Model\ModelInterface; received "%s"',
+                __METHOD__,
+                $fallbackModel
+            ));
+        }
+
+        $this->fallbackModel = (string) $fallbackModel;
+        return $this;
+    }
+
+    /**
+     * Get the model FQCN that is used if no Model is matched according to the Accept header
+     *
+     * @return string
+     */
+    public function getFallbackModel()
+    {
+        return $this->fallbackModel;
+    }
+
+    /**
+     * @param  array $typesToModels
+     * @return SelectModelListener
+     */
+    public function addTypesToModels(array $typesToModels)
+    {
+        foreach ($typesToModels as $type => $model) {
+            $this->addTypeToModel($type, $model);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param string $type
+     * @param string $model
+     */
+    public function addTypeToModel($type, $model)
+    {
+        if (!is_subclass_of($model, 'Zend\View\Model\ModelInterface')) {
+            throw new Exception\DomainException(sprintf(
+                '%s expects a valid implementation of Zend\View\Model\ModelInterface; received "%s"',
+                __METHOD__,
+                $model
+            ));
+        }
+
+        $this->typeToModel[$type] = $model;
     }
 
     /**
@@ -120,6 +186,16 @@ class SelectModelListener implements ListenerAggregateInterface
                 $e->setResult($model);
 
                 return;
+            }
+        }
+
+        // No Model have been matched, use the fallback if one is set
+        if (!empty($this->fallbackModel)) {
+            $model = new $this->fallbackModel;
+            $e->setResult($model);
+
+            if ($result !== null) {
+                $model->setVariables($result);
             }
         }
     }
@@ -182,25 +258,8 @@ class SelectModelListener implements ListenerAggregateInterface
     protected function getModel(AcceptFieldValuePart $acceptFieldValue)
     {
         $typeString = $acceptFieldValue->getTypeString();
-        $model      = $this->typeToModel[$typeString];
+        $modelClass = $this->typeToModel[$typeString];
 
-        if (!class_exists($model)) {
-            throw new Exception\DomainException(sprintf(
-                'Expects string model name to be a valid class name; received "%s"',
-                $model
-            ));
-        }
-
-        $model = new $model;
-
-        if (!$model instanceof ModelInterface) {
-            throw new Exception\DomainException(sprintf(
-                '%s expects a valid implementation of Zend\View\Model\ModelInterface; received "%s"',
-                __METHOD__,
-                $model
-            ));
-        }
-
-        return $model;
+        return new $modelClass;
     }
 }

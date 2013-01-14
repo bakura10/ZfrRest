@@ -17,6 +17,34 @@
  */
 
 return array(
+    'zfr_rest' => array(
+        /**
+         * This listener automatically select the right view model from the request's Accept-Header
+         */
+        'register_select_model_listener' => true,
+
+        /**
+         * Options for the SelectModelListener
+         */
+        'select_model_listener_options' => array(
+            /**
+             * Associative array that map one media type (eg. text/html) to a ModelInterface FQCN
+             */
+            'types_to_model' => array(
+                'text/html'              => 'Zend\View\Model\ViewModel',
+                'application/xhtml+xml'  => 'Zend\View\Model\ViewModel',
+                'application/javascript' => 'Zend\View\Model\JsonModel',
+                'application/json'       => 'Zend\View\Model\JsonModel',
+                'application/x-json'     => 'Zend\View\Model\JsonModel'
+            ),
+
+            /**
+             * If no ModelInterface can be found, select this one (can be set to null)
+             */
+            'fallback_model' => 'Zend\View\Model\JsonModel'
+        )
+    ),
+
     'view_manager' => array(
         'strategies' => array(
             'ViewJsonStrategy'
