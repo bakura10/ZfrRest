@@ -47,17 +47,9 @@ class SelectModelListener implements ListenerAggregateInterface
     protected $fallbackModel = '';
 
     /**
-     * Map a type to a specific instance of ModelInterface
-     *
      * @var array
      */
-    protected $typeToModel = array(
-        'text/html'              => 'Zend\View\Model\ViewModel',
-        'application/xhtml+xml'  => 'Zend\View\Model\ViewModel',
-        'application/javascript' => 'Zend\View\Model\JsonModel',
-        'application/json'       => 'Zend\View\Model\JsonModel',
-        'application/x-json'     => 'Zend\View\Model\JsonModel'
-    );
+    protected $typesToModels = array();
 
 
     /**
@@ -140,7 +132,16 @@ class SelectModelListener implements ListenerAggregateInterface
             ));
         }
 
-        $this->typeToModel[$type] = $model;
+        $this->typesToModels[$type] = $model;
+    }
+
+    /**
+     * @param  string $type
+     * @return bool
+     */
+    public function hasType($type)
+    {
+        return isset($this->typesToModels[$type]);
     }
 
     /**
@@ -242,7 +243,7 @@ class SelectModelListener implements ListenerAggregateInterface
     {
         $typeString = $acceptFieldValue->getTypeString();
 
-        if (isset($this->typeToModel[$typeString])) {
+        if (isset($this->typesToModels[$typeString])) {
             return true;
         }
 
@@ -258,7 +259,7 @@ class SelectModelListener implements ListenerAggregateInterface
     protected function getModel(AcceptFieldValuePart $acceptFieldValue)
     {
         $typeString = $acceptFieldValue->getTypeString();
-        $modelClass = $this->typeToModel[$typeString];
+        $modelClass = $this->typesToModels[$typeString];
 
         return new $modelClass;
     }
